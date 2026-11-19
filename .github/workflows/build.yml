@@ -39,7 +39,7 @@ jobs:
           cd ~/anix
           git config --global user.name "#archsu"
           git config --global user.email "archsu@anixos.org"
-          repo init -u https://github.com/Evolution-X/manifest -b vic --depth=1
+          repo init -u https://github.com/Evolution-X/manifest -b bka --depth=1
 
       - name: Clone Device, Vendor and Kernel Trees
         run: |
