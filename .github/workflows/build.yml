@@ -1,11 +1,15 @@
 name: Build Anix OS (OFFICIAL) for CMF Phone 1 (tetris)
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+  push:
+    branches: [ main ]
     steps:
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
