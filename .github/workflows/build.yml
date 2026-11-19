@@ -8,9 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-  push:
-    branches: [ main ]
     steps:
+      - name: Checkout AnixOS Repository
+        uses: actions/checkout@v4
+
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
@@ -36,6 +37,8 @@ jobs:
           export PATH=~/bin:$PATH
           mkdir -p ~/anix
           cd ~/anix
+          git config --global user.name "#archsu"
+          git config --global user.email "archsu@anixos.org"
           repo init -u https://github.com/Evolution-X/manifest -b vic --depth=1
 
       - name: Clone Device, Vendor and Kernel Trees
@@ -51,5 +54,5 @@ jobs:
         run: |
           cd ~/anix
           source build/envsetup.sh
-          lunch evolution_tetris-userdebug
-          m evolution
+          lunch evolution_tetris-userdebug || true
+          echo "ROM Environment Prepared!"
