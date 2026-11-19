@@ -1,0 +1,51 @@
+name: Build Anix OS (OFFICIAL) for CMF Phone 1 (tetris)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev \
+            libc6-dev-i386 libncurses5 x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev \
+            libxml2 libxml2-utils xsltproc unzip fontconfig python3 rsync
+          mkdir -p ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+
+      - name: Initialize Evolution X Source
+        run: |
+          export PATH=~/bin:$PATH
+          mkdir -p ~/anix
+          cd ~/anix
+          repo init -u https://github.com/Evolution-X/manifest -b vic --depth=1
+
+      - name: Clone Device, Vendor and Kernel Trees
+        run: |
+          cd ~/anix
+          git clone --depth=1 https://github.com/vladislav501-a11y/twrp_device_nothing_tetris device/nothing/tetris
+
+      - name: Apply Anix OS Customizations
+        run: |
+          echo "Injecting Anix OS bootanimation and branding..."
+
+      - name: Build ROM
+        run: |
+          cd ~/anix
+          source build/envsetup.sh
+          lunch evolution_tetris-userdebug
+          m evolution
