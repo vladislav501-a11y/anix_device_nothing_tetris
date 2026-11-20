@@ -12,18 +12,23 @@ jobs:
       - name: Checkout AnixOS Repository
         uses: actions/checkout@v4
 
-      - name: Aggressive Free Disk Space
+      - name: Extreme Free Disk Space
         run: |
-          echo "Starting disk cleanup..."
+          echo "=== Freeing up maximum disk space on runner ==="
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo docker image prune --all --force || true
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/julia*
+          sudo rm -rf /usr/share/kotlinc
+          sudo docker system prune -a -f --volumes || true
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile || true
           df -h
 
       - name: Setup Build Environment
@@ -43,16 +48,16 @@ jobs:
           cd ~/anix
           git config --global user.name "#archsu"
           git config --global user.email "archsu@anixos.org"
-          repo init -u https://github.com/Evolution-X/manifest -b bka --depth=1
-          repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
-          echo "Deleting .repo folder to free up massive disk space..."
+          git config --global core.compression 0
+          repo init -u https://github.com/Evolution-X/manifest -b bka --depth=1 --partial-clone --clone-filter=blob:none
+          repo sync -c -j4 --force-sync --no-clone-bundle --no-tags --current-branch
+          echo "Purging .repo store to recover space..."
           rm -rf ~/anix/.repo
           df -h
 
       - name: Clone Device, Vendor and Kernel Trees
         run: |
           cd ~/anix
-          # Клонируем официальные деревья под CMF Phone 1 (Tetris)
           git clone --depth=1 https://github.com/Evolution-X-Devices/device_nothing_Tetris -b bka device/nothing/Tetris
           git clone --depth=1 https://github.com/Evolution-X-Devices/device_nothing_Tetris-kernel -b bka device/nothing/Tetris-kernel
           git clone --depth=1 https://github.com/Evolution-X-Devices/vendor_nothing_Tetris -b bka vendor/nothing/Tetris
