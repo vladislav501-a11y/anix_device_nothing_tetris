@@ -12,15 +12,19 @@ jobs:
       - name: Checkout AnixOS Repository
         uses: actions/checkout@v4
 
-      - name: Free Disk Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          swap-storage: true
+      - name: Aggressive Free Disk Space
+        run: |
+          echo "Starting disk cleanup..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo docker image prune --all --force || true
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          df -h
 
       - name: Setup Build Environment
         run: |
@@ -41,6 +45,9 @@ jobs:
           git config --global user.email "archsu@anixos.org"
           repo init -u https://github.com/Evolution-X/manifest -b bka --depth=1
           repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+          echo "Deleting .repo folder to free up massive disk space..."
+          rm -rf ~/anix/.repo
+          df -h
 
       - name: Clone Device, Vendor and Kernel Trees
         run: |
@@ -52,11 +59,12 @@ jobs:
           git clone --depth=1 https://github.com/Evolution-X-Devices/hardware_mediatek -b bka hardware/mediatek
           git clone --depth=1 https://github.com/swiitch-OFF-Lab/hardware_dolby -b sony-1.5 hardware/dolby
           git clone --depth=1 https://github.com/swiitch-OFF-Lab/packages_apps_DolbyUI -b a packages/apps/DolbyUI
+          rm -rf device/nothing/Tetris/.git device/nothing/Tetris-kernel/.git vendor/nothing/Tetris/.git hardware/mediatek/.git
+          df -h
 
       - name: Resolve Soong Namespace Conflicts
         run: |
           echo "Resolving namespace conflicts between device/nothing/Tetris and hardware/mediatek..."
-          # Включаем флаг использования кастомного rc из device tree, чтобы hardware/mediatek не объявлял дублирующий модуль init.mt6878.usb.rc
           echo 'SOONG_CONFIG_NAMESPACES += mediatek_gadget' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo 'SOONG_CONFIG_mediatek_gadget += use_custom_usb_gadget_rc' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo 'SOONG_CONFIG_mediatek_gadget_use_custom_usb_gadget_rc := true' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
@@ -70,7 +78,6 @@ jobs:
             mkdir -p ~/anix/vendor/lineage/bootanimation/prebuilts
             cp $GITHUB_WORKSPACE/bootanimation.zip ~/anix/vendor/lineage/bootanimation/prebuilts/1080.zip || true
           fi
-          # Подключаем брендинг AnixOS в конфигурацию устройства
           echo '$(call inherit-product-if-exists, vendor/anix/anix_config.mk)' >> ~/anix/device/nothing/Tetris/lineage_Tetris.mk
 
       - name: Build ROM
