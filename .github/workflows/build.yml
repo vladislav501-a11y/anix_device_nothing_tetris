@@ -40,6 +40,7 @@ jobs:
           git config --global user.name "#archsu"
           git config --global user.email "archsu@anixos.org"
           repo init -u https://github.com/Evolution-X/manifest -b bka --depth=1
+          repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
 
       - name: Clone Device, Vendor and Kernel Trees
         run: |
