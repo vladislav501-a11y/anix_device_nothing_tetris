@@ -45,15 +45,29 @@ jobs:
       - name: Clone Device, Vendor and Kernel Trees
         run: |
           cd ~/anix
-          git clone --depth=1 https://github.com/vladislav501-a11y/twrp_device_nothing_tetris device/nothing/tetris
+          # Клонируем полноценные деревья для сборки ROM под CMF Phone 1 (tetris)
+          git clone --depth=1 https://github.com/Evolution-X-Devices/device_nothing_Tetris -b bka device/nothing/Tetris
+          git clone --depth=1 https://github.com/Evolution-X-Devices/device_nothing_Tetris-kernel -b bka device/nothing/Tetris-kernel
+          git clone --depth=1 https://github.com/Evolution-X-Devices/vendor_nothing_Tetris -b bka vendor/nothing/Tetris
+          git clone --depth=1 https://github.com/Evolution-X-Devices/hardware_mediatek -b bka hardware/mediatek
+          git clone --depth=1 https://github.com/swiitch-OFF-Lab/hardware_dolby -b sony-1.5 hardware/dolby
+          git clone --depth=1 https://github.com/swiitch-OFF-Lab/packages_apps_DolbyUI -b a packages/apps/DolbyUI
 
       - name: Apply Anix OS Customizations
         run: |
           echo "Injecting Anix OS bootanimation and branding..."
+          mkdir -p ~/anix/vendor/anix
+          cp -r $GITHUB_WORKSPACE/overlay/* ~/anix/vendor/anix/ 2>/dev/null || true
+          if [ -f $GITHUB_WORKSPACE/bootanimation.zip ]; then
+            mkdir -p ~/anix/vendor/lineage/bootanimation/prebuilts
+            cp $GITHUB_WORKSPACE/bootanimation.zip ~/anix/vendor/lineage/bootanimation/prebuilts/1080.zip || true
+          fi
+          # Подключаем брендинг AnixOS в конфигурацию устройства
+          echo '$(call inherit-product-if-exists, vendor/anix/anix_config.mk)' >> ~/anix/device/nothing/Tetris/lineage_Tetris.mk
 
       - name: Build ROM
         run: |
           cd ~/anix
           source build/envsetup.sh
-          lunch evolution_tetris-userdebug || true
-          echo "ROM Environment Prepared!"
+          lunch lineage_Tetris-userdebug
+          m evolution
