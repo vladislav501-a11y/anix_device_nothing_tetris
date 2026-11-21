@@ -12,12 +12,21 @@ jobs:
       - name: Checkout AnixOS Repository
         uses: actions/checkout@v4
 
+      - name: Maximize Disk Space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 4096
+          temp-reserve-mb: 1024
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+
       - name: Extreme Free Disk Space
         run: |
           echo "=== Freeing up maximum disk space on runner ==="
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
@@ -27,8 +36,6 @@ jobs:
           sudo docker system prune -a -f --volumes || true
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
-          sudo swapoff -a || true
-          sudo rm -f /mnt/swapfile || true
           df -h
 
       - name: Setup Build Environment
@@ -48,9 +55,9 @@ jobs:
           cd ~/anix
           git config --global user.name "#archsu"
           git config --global user.email "archsu@anixos.org"
-          git config --global core.compression 0
-          repo init -u https://github.com/Evolution-X/manifest -b bka --depth=1 --partial-clone --clone-filter=blob:none
-          repo sync -c -j4 --force-sync --no-clone-bundle --no-tags --current-branch
+          git config --global color.ui false
+          repo init -u https://github.com/Evolution-X/manifest -b bka --depth=1 --no-clone-bundle
+          repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --current-branch
           echo "Purging .repo store to recover space..."
           rm -rf ~/anix/.repo
           df -h
