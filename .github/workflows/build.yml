@@ -76,12 +76,24 @@ jobs:
 
       - name: Resolve Soong Namespace Conflicts
         run: |
-          echo "Resolving namespace conflicts between device/nothing/Tetris and hardware/mediatek..."
+          echo "Resolving namespace conflicts between device/nothing/Tetris, vendor and hardware/mediatek..."
           echo 'SOONG_CONFIG_NAMESPACES += mediatek_gadget' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo 'SOONG_CONFIG_mediatek_gadget += use_custom_usb_gadget_rc' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo 'SOONG_CONFIG_mediatek_gadget_use_custom_usb_gadget_rc := true' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo "Disabling unused automotive proxy test module..."
           rm -rf ~/anix/platform_testing/tools/automotive/proxy 2>/dev/null || true
+          echo "Resolving duplicate mediatek telephony/telecom modules (preferring open source hardware/mediatek)..."
+          python3 -c "
+with open('/home/runner/anix/vendor/nothing/Tetris/Android.bp', 'r') as f:
+    c = f.read()
+import re
+c = re.sub(r'dex_import\s*\{\s*name:\s*\"mediatek-telecom-common\"[\s\S]*?\n\}\n?', '', c)
+c = re.sub(r'dex_import\s*\{\s*name:\s*\"mediatek-telephony-common\"[\s\S]*?\n\}\n?', '', c)
+with open('/home/runner/anix/vendor/nothing/Tetris/Android.bp', 'w') as f:
+    f.write(c)
+"
+          sed -i '/mediatek-telecom-common/d' ~/anix/vendor/nothing/Tetris/Tetris-vendor.mk
+          sed -i '/mediatek-telephony-common/d' ~/anix/vendor/nothing/Tetris/Tetris-vendor.mk
 
       - name: Apply Anix OS Customizations
         run: |
