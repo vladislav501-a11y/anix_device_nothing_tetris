@@ -9,9 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout AnixOS Repository
-        uses: actions/checkout@v4
-
       - name: Maximize Build Space via LVM
         uses: easimon/maximize-build-space@master
         with:
@@ -23,6 +20,9 @@ jobs:
           remove-codeql: 'true'
           remove-docker-images: 'true'
           overprovision-lvm: 'true'
+
+      - name: Checkout AnixOS Repository
+        uses: actions/checkout@v4
 
       - name: Clean Runner Bloat
         run: |
