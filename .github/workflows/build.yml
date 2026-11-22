@@ -82,18 +82,8 @@ jobs:
           echo 'SOONG_CONFIG_mediatek_gadget_use_custom_usb_gadget_rc := true' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo "Disabling unused automotive proxy test module..."
           rm -rf ~/anix/platform_testing/tools/automotive/proxy 2>/dev/null || true
-          echo "Resolving duplicate mediatek telephony/telecom modules (preferring open source hardware/mediatek)..."
-          python3 -c "
-with open('/home/runner/anix/vendor/nothing/Tetris/Android.bp', 'r') as f:
-    c = f.read()
-import re
-c = re.sub(r'dex_import\s*\{\s*name:\s*\"mediatek-telecom-common\"[\s\S]*?\n\}\n?', '', c)
-c = re.sub(r'dex_import\s*\{\s*name:\s*\"mediatek-telephony-common\"[\s\S]*?\n\}\n?', '', c)
-with open('/home/runner/anix/vendor/nothing/Tetris/Android.bp', 'w') as f:
-    f.write(c)
-"
-          sed -i '/mediatek-telecom-common/d' ~/anix/vendor/nothing/Tetris/Tetris-vendor.mk
-          sed -i '/mediatek-telephony-common/d' ~/anix/vendor/nothing/Tetris/Tetris-vendor.mk
+          echo "Resolving duplicate mediatek telephony/telecom modules..."
+          python3 $GITHUB_WORKSPACE/ci/resolve_conflicts.py
 
       - name: Apply Anix OS Customizations
         run: |
