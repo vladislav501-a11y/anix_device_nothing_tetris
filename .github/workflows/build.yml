@@ -80,6 +80,8 @@ jobs:
           echo 'SOONG_CONFIG_NAMESPACES += mediatek_gadget' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo 'SOONG_CONFIG_mediatek_gadget += use_custom_usb_gadget_rc' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
           echo 'SOONG_CONFIG_mediatek_gadget_use_custom_usb_gadget_rc := true' >> ~/anix/device/nothing/Tetris/BoardConfig.mk
+          echo "Disabling unused automotive proxy test module..."
+          rm -rf ~/anix/platform_testing/tools/automotive/proxy 2>/dev/null || true
 
       - name: Apply Anix OS Customizations
         run: |
