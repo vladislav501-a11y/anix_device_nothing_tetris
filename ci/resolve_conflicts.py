@@ -22,13 +22,17 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Fixed vendor/nothing/Tetris/Tetris-vendor.mk duplicate packages")
 
-# 2. Disable unused CTS/tradefed/cuttlefish/testing directories that trigger missing host dependencies
+# 2. Disable unused test dirs
 dirs_to_purge = [
     os.path.expanduser("~/anix/platform_testing"),
     os.path.expanduser("~/anix/tools/tradefederation"),
     os.path.expanduser("~/anix/tools/loganalysis"),
     os.path.expanduser("~/anix/test/suite_harness"),
+    os.path.expanduser("~/anix/test/vts-testcase"),
     os.path.expanduser("~/anix/cts"),
+    os.path.expanduser("~/anix/packages/modules/DeviceLock/tests"),
+    os.path.expanduser("~/anix/packages/modules/Connectivity/nearby/tests"),
+    os.path.expanduser("~/anix/packages/modules/Connectivity/tests"),
     os.path.expanduser("~/anix/packages/modules/AdServices/adservices/libraries/collectors-helper"),
     os.path.expanduser("~/anix/packages/modules/AdServices/adservices/libraries/device-collectors"),
     os.path.expanduser("~/anix/frameworks/libs/systemui/mechanics")
@@ -38,22 +42,29 @@ for d in dirs_to_purge:
         shutil.rmtree(d, ignore_errors=True)
         print(f"Purged {d}")
 
-# 3. Clean all tests/ and Android.bp referencing tradefed_errorprone_defaults or MotionTestDefaults
+# 3. Clean any Android.bp that depends on missing test defaults
 anix_root = os.path.expanduser("~/anix")
-for sub in ["packages/modules/AdServices", "frameworks/libs/systemui"]:
-    target = os.path.join(anix_root, sub)
-    if os.path.exists(target):
-        for root, dirs, files in os.walk(target):
-            if "Android.bp" in files:
-                bp = os.path.join(root, "Android.bp")
-                try:
-                    with open(bp, "r", encoding="utf-8") as f:
-                        txt = f.read()
-                    if "tradefed_errorprone_defaults" in txt or "MotionTestDefaults" in txt:
-                        os.remove(bp)
-                        print(f"Removed broken test Android.bp: {bp}")
-                except Exception:
-                    pass
+bad_defaults = [
+    "tradefed_errorprone_defaults",
+    "MotionTestDefaults",
+    "cts_defaults",
+    "mts-target-sdk-version-current",
+    "mts_defaults"
+]
+
+for root, dirs, files in os.walk(anix_root):
+    # Only check test and tests directories to avoid touching production modules
+    if any(p in root.split(os.sep) for p in ("tests", "test", "cts")):
+        if "Android.bp" in files:
+            bp = os.path.join(root, "Android.bp")
+            try:
+                with open(bp, "r", encoding="utf-8") as f:
+                    txt = f.read()
+                if any(bd in txt for bd in bad_defaults):
+                    os.remove(bp)
+                    print(f"Removed broken test bp: {bp}")
+            except Exception:
+                pass
 
 # 4. Fix nonsecure apex modules in hardware/interfaces that reference missing com.google.cf.apex keys
 hi_dir = os.path.expanduser("~/anix/hardware/interfaces")
