@@ -5,8 +5,8 @@ vendor_bp = os.path.expanduser("~/anix/vendor/nothing/Tetris/Android.bp")
 if os.path.exists(vendor_bp):
     with open(vendor_bp, "r", encoding="utf-8") as f:
         content = f.read()
-    content = re.sub(rdex_imports*{s*name:s*mediatek-telecom-common[sS]*?n}n?, , content)
-    content = re.sub(rdex_imports*{s*name:s*mediatek-telephony-common[sS]*?n}n?, , content)
+    content = re.sub(r'dex_import\s*\{\s*name:\s*"mediatek-telecom-common"[\s\S]*?\n\}\n?', '', content)
+    content = re.sub(r'dex_import\s*\{\s*name:\s*"mediatek-telephony-common"[\s\S]*?\n\}\n?', '', content)
     with open(vendor_bp, "w", encoding="utf-8") as f:
         f.write(content)
     print("Fixed vendor/nothing/Tetris/Android.bp duplicate modules")
@@ -43,7 +43,7 @@ if os.path.exists(hi_dir):
                     with open(bp_path, "r", encoding="utf-8") as f:
                         data = f.read()
                     if "com.google.cf.apex" in data:
-                        new_data = re.sub(rapexs*{[^}]*com.google.cf.apex[^}]*}, , data)
+                        new_data = re.sub(r'apex\s*\{[^}]*com\.google\.cf\.apex[^}]*\}', '', data)
                         with open(bp_path, "w", encoding="utf-8") as f:
                             f.write(new_data)
                         print(f"Patched cuttlefish apex in: {bp_path}")
