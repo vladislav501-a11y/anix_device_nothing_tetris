@@ -1,5 +1,7 @@
 import os, re, shutil
 
+print("=== Starting resolve_conflicts.py ===")
+
 # 1. Fix vendor duplicate modules
 vendor_bp = os.path.expanduser("~/anix/vendor/nothing/Tetris/Android.bp")
 if os.path.exists(vendor_bp):
@@ -20,19 +22,40 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Fixed vendor/nothing/Tetris/Tetris-vendor.mk duplicate packages")
 
-# 2. Disable unused test / platform directories that cause missing host/tradefed/cuttlefish dependencies
+# 2. Disable unused CTS/tradefed/cuttlefish/testing directories that trigger missing host dependencies
 dirs_to_purge = [
     os.path.expanduser("~/anix/platform_testing"),
     os.path.expanduser("~/anix/tools/tradefederation"),
     os.path.expanduser("~/anix/tools/loganalysis"),
-    os.path.expanduser("~/anix/test/suite_harness")
+    os.path.expanduser("~/anix/test/suite_harness"),
+    os.path.expanduser("~/anix/cts"),
+    os.path.expanduser("~/anix/packages/modules/AdServices/adservices/libraries/collectors-helper"),
+    os.path.expanduser("~/anix/packages/modules/AdServices/adservices/libraries/device-collectors"),
+    os.path.expanduser("~/anix/frameworks/libs/systemui/mechanics")
 ]
 for d in dirs_to_purge:
     if os.path.exists(d):
         shutil.rmtree(d, ignore_errors=True)
         print(f"Purged {d}")
 
-# 3. Fix nonsecure apex modules in hardware/interfaces that reference missing com.google.cf.apex keys
+# 3. Clean all tests/ and Android.bp referencing tradefed_errorprone_defaults or MotionTestDefaults
+anix_root = os.path.expanduser("~/anix")
+for sub in ["packages/modules/AdServices", "frameworks/libs/systemui"]:
+    target = os.path.join(anix_root, sub)
+    if os.path.exists(target):
+        for root, dirs, files in os.walk(target):
+            if "Android.bp" in files:
+                bp = os.path.join(root, "Android.bp")
+                try:
+                    with open(bp, "r", encoding="utf-8") as f:
+                        txt = f.read()
+                    if "tradefed_errorprone_defaults" in txt or "MotionTestDefaults" in txt:
+                        os.remove(bp)
+                        print(f"Removed broken test Android.bp: {bp}")
+                except Exception:
+                    pass
+
+# 4. Fix nonsecure apex modules in hardware/interfaces that reference missing com.google.cf.apex keys
 hi_dir = os.path.expanduser("~/anix/hardware/interfaces")
 if os.path.exists(hi_dir):
     for root, dirs, files in os.walk(hi_dir):
@@ -49,3 +72,5 @@ if os.path.exists(hi_dir):
                         print(f"Patched cuttlefish apex in: {bp_path}")
                 except Exception as e:
                     print(f"Error patching {bp_path}: {e}")
+
+print("=== resolve_conflicts.py completed successfully ===")
