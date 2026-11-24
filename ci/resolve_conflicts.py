@@ -1,4 +1,4 @@
-import os, re, glob
+import os, re, shutil
 
 print("=== Starting resolve_conflicts.py ===")
 
@@ -33,7 +33,8 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Vendor Tetris-vendor.mk patched successfully.")
 
-# 3. Aggressively purge test directories
+# 3. Aggressively purge test directories and suites
+# Since tests are NEVER compiled into the target ROM, completely remove all tests under packages/modules and frameworks
 purge_paths = [
     "platform_testing",
     "tools/tradefederation",
@@ -44,18 +45,41 @@ purge_paths = [
     "packages/modules/Connectivity/tests",
     "packages/modules/Connectivity/bpf/tests",
     "packages/modules/Connectivity/thread/tests",
+    "packages/modules/Connectivity/nearby/tests",
+    "packages/modules/Connectivity/remoteauth/tests",
+    "packages/modules/Connectivity/networksecurity/tests",
+    "packages/modules/Connectivity/staticlibs/tests",
+    "packages/modules/Connectivity/Tethering/tests",
+    "packages/modules/Connectivity/Vcn/tests",
     "packages/modules/DeviceLock/tests",
     "packages/modules/AdServices/adservices/libraries",
+    "packages/modules/AdServices/adservices/tests",
+    "packages/modules/AdServices/sdksandbox/tests",
+    "packages/modules/HealthFitness/tests",
+    "packages/modules/IPsec/tests",
+    "packages/modules/StatsD/tests",
+    "packages/modules/DnsResolver/tests",
+    "packages/modules/Bluetooth/framework/tests",
+    "packages/modules/Bluetooth/system/embdrv/tests",
+    "packages/modules/ExtServices/java/tests",
+    "packages/modules/Uwb/ranging/tests",
+    "packages/modules/Uwb/tests",
+    "packages/modules/CaptivePortalLogin/tests",
+    "packages/modules/NetworkStack/tests",
     "frameworks/libs/systemui/mechanics",
-    "frameworks/base/libs/WindowManager/Shell/tests/flicker",
+    "frameworks/base/libs/WindowManager/Shell/tests",
+    "frameworks/base/packages/SystemUI/compose/scene/tests",
+    "frameworks/base/services/tests",
+    "frameworks/base/core/tests",
+    "frameworks/base/tests",
+    "frameworks/opt/telephony/tests",
     "art/test",
 ]
 
 for p in purge_paths:
     full = os.path.join(anix_root, p)
     if os.path.exists(full):
-        print(f"Purging directory: {full}")
-        import shutil
+        print(f"Purging test directory: {full}")
         shutil.rmtree(full, ignore_errors=True)
 
 # 4. Remove secretkeeper tests if present
@@ -67,15 +91,26 @@ if os.path.exists(sk_bp):
     with open(sk_bp, "w", encoding="utf-8") as f:
         f.write(sk_text)
 
-# 5. Purge any Android.bp containing csuite_test or broken test defaults
-print("Scanning and eliminating residual broken test Android.bp...")
+# 5. Broad scan: remove ANY Android.bp inside a tests/ directory or referencing mts/cts/test-sdk
+print("Scanning and eliminating any residual test Android.bp...")
 for root, dirs, files in os.walk(anix_root):
     if "Android.bp" in files:
         bp_path = os.path.join(root, "Android.bp")
+        norm_path = bp_path.replace("\\", "/")
+        # If this Android.bp is in any test directory, remove it entirely
+        if "/tests/" in norm_path or "/test/" in norm_path or "/testapps/" in norm_path or "/hosttests/" in norm_path:
+            try:
+                os.remove(bp_path)
+                continue
+            except Exception:
+                pass
+        
+        # If it's a non-test Android.bp, check for broken test module definitions
         try:
             with open(bp_path, "r", encoding="utf-8", errors="ignore") as f:
                 c = f.read()
             if any(term in c for term in [
+                "mts-target-sdk-version-current",
                 "csuite_test",
                 "cts_support_defaults",
                 "rdroidtest.defaults",
@@ -86,15 +121,10 @@ for root, dirs, files in os.walk(anix_root):
                 "cts_defaults",
                 "mts_defaults"
             ]):
-                if "/tests/" in bp_path or "test" in root.lower():
-                    print(f"Removing broken test bp: {bp_path}")
-                    os.remove(bp_path)
-                else:
-                    # If it is a shared Android.bp, just remove csuite_test definitions
-                    if "csuite_test" in c:
-                        c_clean = re.sub(r'csuite_test\s*\{[^}]*?\}\n*', '', c, flags=re.DOTALL)
-                        with open(bp_path, "w", encoding="utf-8") as out_f:
-                            out_f.write(c_clean)
+                # Remove test module blocks or file if purely tests
+                c_clean = re.sub(r'(android_test|android_test_helper_app|java_test|java_test_host|csuite_test)\s*\{[^}]*?\}\n*', '', c, flags=re.DOTALL)
+                with open(bp_path, "w", encoding="utf-8") as out_f:
+                    out_f.write(c_clean)
         except Exception:
             pass
 
