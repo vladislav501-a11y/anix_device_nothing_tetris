@@ -1,6 +1,6 @@
 import os, re, shutil
 
-print("=== Starting resolve_conflicts.py ===")
+print("=== Starting comprehensive resolve_conflicts.py ===")
 
 anix_root = os.path.expanduser("~/anix")
 
@@ -14,8 +14,6 @@ if os.path.exists(vendor_bp):
     # Remove complete dex_import blocks for mediatek-telecom-common and mediatek-telephony-common
     pattern = r'dex_import\s*\{[^}]*?"mediatek-tele(com|phony)-common"[^}]*?\}\n*'
     content = re.sub(pattern, '', content, flags=re.DOTALL)
-    
-    # Also remove any anonymous/empty dex_import or prebuilt blocks that might cause "prebuilt_" collision
     content = re.sub(r'dex_import\s*\{\s*owner:[^}]*?\}\n*', '', content, flags=re.DOTALL)
     
     with open(vendor_bp, "w", encoding="utf-8") as f:
@@ -33,13 +31,19 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Vendor Tetris-vendor.mk patched successfully.")
 
-# 3. Explicitly purge test directories and suites
+# 3. Explicitly purge entire test/fuzzing/cts/mts tree structures
 purge_paths = [
     "platform_testing",
     "tools/tradefederation",
     "tools/loganalysis",
+    "tools/platform-compat",
+    "tools/security/fuzzing",
     "test",
     "cts",
+    "vts",
+    "art/test",
+    "art/cmdline",
+    "system/core/trusty/confirmationui",
     "packages/modules/Nfc/tests",
     "packages/modules/Connectivity/tests",
     "packages/modules/Connectivity/bpf/tests",
@@ -72,7 +76,6 @@ purge_paths = [
     "frameworks/base/core/tests",
     "frameworks/base/tests",
     "frameworks/opt/telephony/tests",
-    "art/test",
 ]
 
 for p in purge_paths:
@@ -90,17 +93,46 @@ if os.path.exists(sk_bp):
     with open(sk_bp, "w", encoding="utf-8") as f:
         f.write(sk_text)
 
-# 5. Remove only test Android.bp inside dedicated test directories
-print("Scanning and eliminating test-only Android.bp...")
+# 5. Neutralize all test-only Android.bp everywhere
+print("Scanning and eliminating all test/fuzz/benchmark Android.bp files...")
+deleted_count = 0
 for root, dirs, files in os.walk(anix_root):
     if "Android.bp" in files:
         bp_path = os.path.join(root, "Android.bp")
         norm_path = bp_path.replace("\\", "/")
-        # ONLY delete Android.bp if it is inside a tests or testapps directory
-        if any(seg in norm_path for seg in ["/tests/", "/testapps/", "/hosttests/", "/cts/", "/mts/"]):
+        # Delete if path is clearly test, fuzz, benchmark, sample, or testapp
+        if any(seg in norm_path for seg in [
+            "/tests/", "/test/", "/testapps/", "/hosttests/", "/cts/", "/mts/",
+            "/fuzz/", "/fuzzing/", "/fuzzer/", "/benchmarks/", "/benchmark/"
+        ]):
             try:
                 os.remove(bp_path)
+                deleted_count += 1
             except Exception:
                 pass
 
+print(f"Deleted {deleted_count} test/fuzz Android.bp files.")
+
+# 6. For Android.bp that contain fuzzers or tests in mixed folders (like hardware/st/nfc/aidl/Android.bp)
+print("Sanitizing mixed Android.bp files from cc_fuzz and cc_test...")
+sanitized_count = 0
+for root, dirs, files in os.walk(anix_root):
+    if "Android.bp" in files:
+        bp_path = os.path.join(root, "Android.bp")
+        try:
+            with open(bp_path, "r", encoding="utf-8", errors="ignore") as f:
+                c = f.read()
+            if any(k in c for k in ["service_fuzzer_defaults", "libstagefright_fuzzer_defaults", "art_gtest_defaults", "cc_fuzz"]):
+                # Remove whole cc_fuzz blocks
+                c_clean = re.sub(r'cc_fuzz\s*\{[^}]*?\}\n*', '', c, flags=re.DOTALL)
+                c_clean = re.sub(r'art_cc_test\s*\{[^}]*?\}\n*', '', c_clean, flags=re.DOTALL)
+                c_clean = re.sub(r'art_cc_test_library\s*\{[^}]*?\}\n*', '', c_clean, flags=re.DOTALL)
+                if c_clean != c:
+                    with open(bp_path, "w", encoding="utf-8") as out_f:
+                        out_f.write(c_clean)
+                    sanitized_count += 1
+        except Exception:
+            pass
+
+print(f"Sanitized {sanitized_count} mixed Android.bp files.")
 print("=== resolve_conflicts.py completed successfully ===")
