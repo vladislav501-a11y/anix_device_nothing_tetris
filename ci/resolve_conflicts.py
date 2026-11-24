@@ -33,8 +33,7 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Vendor Tetris-vendor.mk patched successfully.")
 
-# 3. Aggressively purge test directories and suites
-# Since tests are NEVER compiled into the target ROM, completely remove all tests under packages/modules and frameworks
+# 3. Explicitly purge test directories and suites
 purge_paths = [
     "platform_testing",
     "tools/tradefederation",
@@ -91,41 +90,17 @@ if os.path.exists(sk_bp):
     with open(sk_bp, "w", encoding="utf-8") as f:
         f.write(sk_text)
 
-# 5. Broad scan: remove ANY Android.bp inside a tests/ directory or referencing mts/cts/test-sdk
-print("Scanning and eliminating any residual test Android.bp...")
+# 5. Remove only test Android.bp inside dedicated test directories
+print("Scanning and eliminating test-only Android.bp...")
 for root, dirs, files in os.walk(anix_root):
     if "Android.bp" in files:
         bp_path = os.path.join(root, "Android.bp")
         norm_path = bp_path.replace("\\", "/")
-        # If this Android.bp is in any test directory, remove it entirely
-        if "/tests/" in norm_path or "/test/" in norm_path or "/testapps/" in norm_path or "/hosttests/" in norm_path:
+        # ONLY delete Android.bp if it is inside a tests or testapps directory
+        if any(seg in norm_path for seg in ["/tests/", "/testapps/", "/hosttests/", "/cts/", "/mts/"]):
             try:
                 os.remove(bp_path)
-                continue
             except Exception:
                 pass
-        
-        # If it's a non-test Android.bp, check for broken test module definitions
-        try:
-            with open(bp_path, "r", encoding="utf-8", errors="ignore") as f:
-                c = f.read()
-            if any(term in c for term in [
-                "mts-target-sdk-version-current",
-                "csuite_test",
-                "cts_support_defaults",
-                "rdroidtest.defaults",
-                "connectivity-mainline-presubmit-cc-defaults",
-                "framework-connectivity-test-defaults",
-                "tradefed_errorprone_defaults",
-                "MotionTestDefaults",
-                "cts_defaults",
-                "mts_defaults"
-            ]):
-                # Remove test module blocks or file if purely tests
-                c_clean = re.sub(r'(android_test|android_test_helper_app|java_test|java_test_host|csuite_test)\s*\{[^}]*?\}\n*', '', c, flags=re.DOTALL)
-                with open(bp_path, "w", encoding="utf-8") as out_f:
-                    out_f.write(c_clean)
-        except Exception:
-            pass
 
 print("=== resolve_conflicts.py completed successfully ===")
