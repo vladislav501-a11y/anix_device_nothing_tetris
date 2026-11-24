@@ -83,7 +83,7 @@ jobs:
           echo "Disabling unused automotive proxy test module..."
           rm -rf ~/anix/platform_testing/tools/automotive/proxy 2>/dev/null || true
           echo "Resolving duplicate mediatek telephony/telecom modules..."
-          python3 $GITHUB_WORKSPACE/ci/resolve_conflicts.py
+          bash $GITHUB_WORKSPACE/ci/resolve_conflicts.sh
 
       - name: Apply Anix OS Customizations
         run: |
