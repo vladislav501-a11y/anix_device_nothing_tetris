@@ -1,7 +1,7 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
-echo "=== Starting resolve_conflicts.sh (Pure Bash) ==="
+echo "=== Starting resolve_conflicts.sh ==="
 
 ANIX_ROOT="${HOME}/anix"
 VENDOR_BP="${ANIX_ROOT}/vendor/nothing/Tetris/Android.bp"
@@ -44,19 +44,24 @@ if [ -f "${ANIX_ROOT}/system/secretkeeper/client/Android.bp" ]; then
     sed -i '/rust_test {/,/}/d' "${ANIX_ROOT}/system/secretkeeper/client/Android.bp"
 fi
 
-# 5. Clean any test Android.bp matching bad test defaults or test suites
+# 5. Clean any test Android.bp matching bad test defaults or test suites (safe grep without pipefail trap)
 echo "Scanning and eliminating residual broken test Android.bp..."
-find "${ANIX_ROOT}" -type f -name "Android.bp" -path "*/tests/*" -exec grep -lE '(cts_support_defaults|rdroidtest\.defaults|connectivity-mainline-presubmit-cc-defaults|framework-connectivity-test-defaults|tradefed_errorprone_defaults|MotionTestDefaults|cts_defaults|mts_defaults)' {} + 2>/dev/null | while read -r bp; do
-    echo "Removing broken test bp: $bp"
-    rm -f "$bp"
-done
+find "${ANIX_ROOT}" -type f -name "Android.bp" -path "*/tests/*" -exec grep -lE '(cts_support_defaults|rdroidtest\.defaults|connectivity-mainline-presubmit-cc-defaults|framework-connectivity-test-defaults|tradefed_errorprone_defaults|MotionTestDefaults|cts_defaults|mts_defaults)' {} + 2>/dev/null | while read -r bp || [ -n "$bp" ]; do
+    if [ -n "$bp" ]; then
+        echo "Removing broken test bp: $bp"
+        rm -f "$bp"
+    fi
+done || true
 
 # 6. Fix nonsecure apex modules in hardware/interfaces
 if [ -d "${ANIX_ROOT}/hardware/interfaces" ]; then
     echo "Cleaning cuttlefish apex in hardware/interfaces..."
-    find "${ANIX_ROOT}/hardware/interfaces" -type f -name "Android.bp" -exec grep -l "com.google.cf.apex" {} + 2>/dev/null | while read -r bp; do
-        sed -i '/apex {/,/}/ { /com\.google\.cf\.apex/d }' "$bp"
-    done
+    find "${ANIX_ROOT}/hardware/interfaces" -type f -name "Android.bp" -exec grep -l "com.google.cf.apex" {} + 2>/dev/null | while read -r bp || [ -n "$bp" ]; do
+        if [ -n "$bp" ]; then
+            sed -i '/apex {/,/}/ { /com\.google\.cf\.apex/d }' "$bp"
+        fi
+    done || true
 fi
 
 echo "=== resolve_conflicts.sh completed successfully ==="
+exit 0
