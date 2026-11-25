@@ -39,6 +39,7 @@ purge_dirs = [
     "platform_testing/tests",
     "tools/security/fuzzing",
     "external/openwrt-prebuilts",
+    "device/generic/trusty",
 ]
 
 for p in purge_dirs:
