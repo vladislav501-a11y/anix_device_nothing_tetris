@@ -31,16 +31,11 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Vendor Tetris-vendor.mk patched successfully.")
 
-# 3. Only delete standalone dedicated test/fuzz directories that are not needed by the ROM
+# 3. Only delete standalone dedicated directories known to have missing cuttlefish/fuzz deps
+# Keep 'test', 'tools/tradefederation', 'cts', 'vts' intact so Soong recognizes module types like csuite_test
 purge_dirs = [
     "platform_testing",
-    "tools/tradefederation",
-    "tools/loganalysis",
-    "tools/platform-compat",
     "tools/security/fuzzing",
-    "test",
-    "cts",
-    "vts",
 ]
 
 for p in purge_dirs:
