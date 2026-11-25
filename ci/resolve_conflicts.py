@@ -31,11 +31,12 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Vendor Tetris-vendor.mk patched successfully.")
 
-# 3. Only delete standalone dedicated directories known to have broken/unused deps
-# Keep 'platform_testing' (except automotive/proxy), 'test', 'tools/tradefederation', 'cts', 'vts'
+# 3. Only delete standalone dedicated directories/files known to have broken/unused deps
+# Keep 'platform_testing/libraries', 'test', 'tools/tradefederation', 'cts', 'vts'
 # intact so Soong recognizes module types like csuite_test and defaults like MotionTestDefaults.
 purge_dirs = [
     "platform_testing/tools/automotive/proxy",
+    "platform_testing/tests",
     "tools/security/fuzzing",
 ]
 
@@ -44,6 +45,12 @@ for p in purge_dirs:
     if os.path.exists(full):
         print(f"Purging standalone directory: {full}")
         shutil.rmtree(full, ignore_errors=True)
+
+# Remove root platform_testing/Android.bp ('platform_tests' depends on missing CuttlefishRilTests/CuttlefishWifiTests)
+pt_root_bp = os.path.join(anix_root, "platform_testing/Android.bp")
+if os.path.exists(pt_root_bp):
+    print(f"Removing root {pt_root_bp} (cuttlefish deps)...")
+    os.remove(pt_root_bp)
 
 # 3b. Provide stub java_defaults if tools/tradefederation/core is not synced (e.g. -notdefault)
 tf_core_bp = os.path.join(anix_root, "tools/tradefederation/core/Android.bp")
