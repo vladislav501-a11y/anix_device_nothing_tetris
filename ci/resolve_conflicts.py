@@ -31,18 +31,36 @@ if os.path.exists(vendor_mk):
         f.writelines(lines)
     print("Vendor Tetris-vendor.mk patched successfully.")
 
-# 3. Only delete standalone dedicated directories known to have missing cuttlefish/fuzz deps
-# Keep 'test', 'tools/tradefederation', 'cts', 'vts' intact so Soong recognizes module types like csuite_test
+# 3. Only delete standalone dedicated directories known to have broken/unused deps
+# Keep 'platform_testing' (except automotive/proxy), 'test', 'tools/tradefederation', 'cts', 'vts'
+# intact so Soong recognizes module types like csuite_test and defaults like MotionTestDefaults.
 purge_dirs = [
-    "platform_testing",
+    "platform_testing/tools/automotive/proxy",
     "tools/security/fuzzing",
 ]
 
 for p in purge_dirs:
     full = os.path.join(anix_root, p)
     if os.path.exists(full):
-        print(f"Purging standalone test directory: {full}")
+        print(f"Purging standalone directory: {full}")
         shutil.rmtree(full, ignore_errors=True)
+
+# 3b. Provide stub java_defaults if tools/tradefederation/core is not synced (e.g. -notdefault)
+tf_core_bp = os.path.join(anix_root, "tools/tradefederation/core/Android.bp")
+if not os.path.exists(tf_core_bp):
+    stubs_dir = os.path.join(anix_root, "vendor/anix/ci_stubs")
+    os.makedirs(stubs_dir, exist_ok=True)
+    stubs_bp = os.path.join(stubs_dir, "Android.bp")
+    print(f"tools/tradefederation/core not found; creating stubs in {stubs_bp}...")
+    with open(stubs_bp, "w", encoding="utf-8") as f:
+        f.write(
+            'java_defaults {\n'
+            '    name: "tradefed_defaults",\n'
+            '}\n\n'
+            'java_defaults {\n'
+            '    name: "tradefed_errorprone_defaults",\n'
+            '}\n'
+        )
 
 # 4. Remove secretkeeper tests if present
 sk_bp = os.path.join(anix_root, "system/secretkeeper/client/Android.bp")
