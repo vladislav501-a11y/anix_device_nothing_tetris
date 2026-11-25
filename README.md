@@ -15,7 +15,3 @@ Anix OS is a performance and aesthetic focused Android distribution based on Evo
 * iOS Style Split Notification & Control Center
 * Custom Anix OS bootanimation & default Liquid Glass wallpaper
 * Maintainer: `#archsu`
-
-### Authors & Contributors
-* **#archsu** — Lead Maintainer & Device Configuration
-* **Antigravity AI (Gemini 4 Hydrogen)** — CI/CD Automation & Build Troubleshooting
