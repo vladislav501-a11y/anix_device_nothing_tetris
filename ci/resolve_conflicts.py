@@ -52,7 +52,7 @@ if os.path.exists(pt_root_bp):
     print(f"Removing root {pt_root_bp} (cuttlefish deps)...")
     os.remove(pt_root_bp)
 
-# 3b. Provide stub defaults/libs if tools/tradefederation/core or platform_testing/tests are absent
+# 3b. Provide stub defaults/libs/keys if optional AOSP dirs are absent
 stubs_dir = os.path.join(anix_root, "vendor/anix/ci_stubs")
 os.makedirs(stubs_dir, exist_ok=True)
 stubs_bp = os.path.join(stubs_dir, "Android.bp")
@@ -60,6 +60,36 @@ stub_blocks = [
     'java_library {\n    name: "common-platform-scenarios",\n}\n',
     'java_library {\n    name: "common-platform-scenario-tests",\n}\n',
 ]
+
+# Stub Cuttlefish apex key & certificate for hardware/interfaces/*/software/*.nonsecure
+cf_x509 = os.path.join(stubs_dir, "com.google.cf.apex.x509.pem")
+cf_pk8 = os.path.join(stubs_dir, "com.google.cf.apex.pk8")
+cf_pem = os.path.join(stubs_dir, "com.google.cf.apex.pem")
+cf_pub = os.path.join(stubs_dir, "com.google.cf.apex.avbpubkey")
+testkey_x509 = os.path.join(anix_root, "build/make/target/product/security/testkey.x509.pem")
+testkey_pk8 = os.path.join(anix_root, "build/make/target/product/security/testkey.pk8")
+if os.path.exists(testkey_x509) and os.path.exists(testkey_pk8):
+    shutil.copyfile(testkey_x509, cf_x509)
+    shutil.copyfile(testkey_pk8, cf_pk8)
+else:
+    open(cf_x509, "wb").close()
+    open(cf_pk8, "wb").close()
+for p in (cf_pem, cf_pub):
+    if not os.path.exists(p):
+        open(p, "wb").close()
+
+stub_blocks.append(
+    'apex_key {\n'
+    '    name: "com.google.cf.apex.key",\n'
+    '    public_key: "com.google.cf.apex.avbpubkey",\n'
+    '    private_key: "com.google.cf.apex.pem",\n'
+    '}\n\n'
+    'android_app_certificate {\n'
+    '    name: "com.google.cf.apex.certificate",\n'
+    '    certificate: "com.google.cf.apex",\n'
+    '}\n'
+)
+
 tf_core_bp = os.path.join(anix_root, "tools/tradefederation/core/Android.bp")
 if not os.path.exists(tf_core_bp):
     print("tools/tradefederation/core not found; adding tradefed_defaults stubs...")
