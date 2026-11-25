@@ -57,7 +57,8 @@ stubs_dir = os.path.join(anix_root, "vendor/anix/ci_stubs")
 os.makedirs(stubs_dir, exist_ok=True)
 stubs_bp = os.path.join(stubs_dir, "Android.bp")
 stub_blocks = [
-    'java_library {\n    name: "common-platform-scenarios",\n}\n'
+    'java_library {\n    name: "common-platform-scenarios",\n}\n',
+    'java_library {\n    name: "common-platform-scenario-tests",\n}\n',
 ]
 tf_core_bp = os.path.join(anix_root, "tools/tradefederation/core/Android.bp")
 if not os.path.exists(tf_core_bp):
