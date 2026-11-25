@@ -52,22 +52,23 @@ if os.path.exists(pt_root_bp):
     print(f"Removing root {pt_root_bp} (cuttlefish deps)...")
     os.remove(pt_root_bp)
 
-# 3b. Provide stub java_defaults if tools/tradefederation/core is not synced (e.g. -notdefault)
+# 3b. Provide stub defaults/libs if tools/tradefederation/core or platform_testing/tests are absent
+stubs_dir = os.path.join(anix_root, "vendor/anix/ci_stubs")
+os.makedirs(stubs_dir, exist_ok=True)
+stubs_bp = os.path.join(stubs_dir, "Android.bp")
+stub_blocks = [
+    'java_library {\n    name: "common-platform-scenarios",\n}\n'
+]
 tf_core_bp = os.path.join(anix_root, "tools/tradefederation/core/Android.bp")
 if not os.path.exists(tf_core_bp):
-    stubs_dir = os.path.join(anix_root, "vendor/anix/ci_stubs")
-    os.makedirs(stubs_dir, exist_ok=True)
-    stubs_bp = os.path.join(stubs_dir, "Android.bp")
-    print(f"tools/tradefederation/core not found; creating stubs in {stubs_bp}...")
-    with open(stubs_bp, "w", encoding="utf-8") as f:
-        f.write(
-            'java_defaults {\n'
-            '    name: "tradefed_defaults",\n'
-            '}\n\n'
-            'java_defaults {\n'
-            '    name: "tradefed_errorprone_defaults",\n'
-            '}\n'
-        )
+    print("tools/tradefederation/core not found; adding tradefed_defaults stubs...")
+    stub_blocks.append(
+        'java_defaults {\n    name: "tradefed_defaults",\n}\n\n'
+        'java_defaults {\n    name: "tradefed_errorprone_defaults",\n}\n'
+    )
+print(f"Writing CI stubs to {stubs_bp}...")
+with open(stubs_bp, "w", encoding="utf-8") as f:
+    f.write("\n".join(stub_blocks))
 
 # 4. Remove secretkeeper tests if present
 sk_bp = os.path.join(anix_root, "system/secretkeeper/client/Android.bp")
