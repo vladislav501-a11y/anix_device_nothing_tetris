@@ -38,6 +38,7 @@ purge_dirs = [
     "platform_testing/tools/automotive/proxy",
     "platform_testing/tests",
     "tools/security/fuzzing",
+    "external/openwrt-prebuilts",
 ]
 
 for p in purge_dirs:
