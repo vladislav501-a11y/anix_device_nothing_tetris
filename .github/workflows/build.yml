@@ -13,7 +13,7 @@ jobs:
         uses: easimon/maximize-build-space@master
         with:
           root-reserve-mb: 1024
-          swap-size-mb: 1024
+          swap-size-mb: 12288
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
@@ -101,7 +101,8 @@ jobs:
           cd ~/anix
           source build/envsetup.sh
           lunch lineage_Tetris-userdebug
-          m evolution
+          export _JAVA_OPTIONS="-Xmx4g"
+          m -j3 evolution
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
